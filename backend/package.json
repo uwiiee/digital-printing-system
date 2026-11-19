@@ -16,7 +16,8 @@
     "test:forecast": "node src/scripts/forecastTest.js",
     "test:reports": "node src/scripts/reportSmokeTest.js",
     "test:auth": "node src/scripts/authTest.js",
-    "test:password": "node src/scripts/passwordSmokeTest.js"
+    "test:password": "node src/scripts/passwordSmokeTest.js",
+    "test:chat": "node src/scripts/chatSmokeTest.js"
   },
   "keywords": [],
   "author": "",

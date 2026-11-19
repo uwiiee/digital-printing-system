@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { api, FILE_URL } from "../../services/api";
+import { MessageCircle } from "lucide-react";
+import { api } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
-import { STATUS_LABEL, labelFromKey, peso } from "../../utils/format";
+import ChatBox from "../../components/ChatBox";
+import OrderSummary from "../../components/OrderSummary";
+import { STATUS_LABEL } from "../../utils/format";
+import { orderLabel } from "../../utils/orders";
+
+const REFRESH_MS = 30_000; // status changes and new-message badges refresh by themselves
 
 export default function MyOrders() {
   const { token } = useAuth();
@@ -10,21 +16,35 @@ export default function MyOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [openChat, setOpenChat] = useState(null); // id of the order whose chat is open
 
   useEffect(() => {
-    api("/orders/mine", { token })
-      .then(setOrders)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+    let ignore = false;
+    const load = () =>
+      api("/orders/mine", { token })
+        .then((d) => !ignore && (setOrders(d), setError("")))
+        .catch((err) => !ignore && setError(err.message))
+        .finally(() => !ignore && setLoading(false));
+    load();
+    const timer = setInterval(load, REFRESH_MS);
+    return () => {
+      ignore = true;
+      clearInterval(timer);
+    };
   }, [token]);
+
+  // Opening a chat reads the messages, so its badge goes away
+  const toggleChat = (id) => {
+    const closing = openChat === id;
+    setOpenChat(closing ? null : id);
+    if (!closing) setOrders((prev) => prev.map((o) => (o._id === id ? { ...o, unreadForCustomer: 0 } : o)));
+  };
 
   return (
     <>
       <h2>My Orders</h2>
       {location.state?.placed && (
-        <p className="notice">
-          Order placed! The shop will review it and confirm.
-        </p>
+        <p className="notice">Order placed! The shop will review it and message you here. Open the chat on your order to talk to them.</p>
       )}
       {loading && <p>Loading...</p>}
       {error && <p className="error">{error}</p>}
@@ -33,50 +53,19 @@ export default function MyOrders() {
       {orders.map((o) => (
         <div className="card order" key={o._id}>
           <div className="row">
-            <strong>Order #{o._id.slice(-6).toUpperCase()}</strong>
-            <span className={`badge badge-${o.status.replace(" ", "-")}`}>
-              {STATUS_LABEL[o.status]}
-            </span>
+            <strong>Order #{orderLabel(o)}</strong>
+            <span className={`badge badge-${o.status.replace(" ", "-")}`}>{STATUS_LABEL[o.status]}</span>
           </div>
           <small>{new Date(o.createdAt).toLocaleString()}</small>
 
-          <ul>
-            {o.items.map((i, idx) => (
-              <li key={idx}>
-                {i.quantity} × {i.productName}
-                <small style={{ display: "block" }}>
-                  {Object.entries(i.specs)
-                    .map(([k, v]) => `${labelFromKey(k)}: ${v}`)
-                    .join(", ")}
-                </small>
-                {i.designFile && (
-                  <a
-                    href={FILE_URL + i.designFile}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    View design
-                  </a>
-                )}
-              </li>
-            ))}
-          </ul>
+          <OrderSummary order={o} />
 
-          <p>
-            Estimated total: {peso(o.estimatedTotal)}
-            {o.finalPrice != null && (
-              <>
-                {" "}
-                · <strong>Final price: {peso(o.finalPrice)}</strong>
-              </>
-            )}
-          </p>
-          {o.downPayment?.requested && (
-            <p>
-              Down payment requested: {peso(o.downPayment.amount)} (
-              {o.downPayment.received ? "received" : "not yet received"})
-            </p>
-          )}
+          <button type="button" className="chat-toggle" onClick={() => toggleChat(o._id)}>
+            <MessageCircle size={16} aria-hidden="true" />
+            {openChat === o._id ? "Hide chat" : "Chat with the shop"}
+            {o.unreadForCustomer > 0 && openChat !== o._id && <span className="unread-badge">{o.unreadForCustomer}</span>}
+          </button>
+          {openChat === o._id && <ChatBox orderId={o._id} role="customer" />}
         </div>
       ))}
     </>

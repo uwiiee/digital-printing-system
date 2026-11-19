@@ -1,0 +1,25 @@
+/* Order chat (customer and admin) */
+.chat { margin-top: 0.75rem; }
+.chat-list { height: 300px; overflow-y: auto; padding: 0.75rem; background: #f8fafc; border: 1px solid var(--line); border-radius: 12px; display: flex; flex-direction: column; gap: 0.5rem; }
+.chat-empty { margin: auto; color: var(--muted); text-align: center; }
+.bubble-row { display: flex; }
+.bubble-row.mine { justify-content: flex-end; }
+.bubble { max-width: 80%; padding: 0.5rem 0.75rem; border-radius: 14px; display: flex; flex-direction: column; gap: 0.1rem; }
+.bubble-mine { background: var(--primary); color: #fff; border-bottom-right-radius: 4px; }
+.bubble-theirs { background: #fff; border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.bubble-who { font-size: 0.75rem; color: var(--muted); }
+.bubble-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.bubble small { font-size: 0.7rem; opacity: 0.75; align-self: flex-end; }
+.chat-form { display: flex; gap: 0.5rem; margin-top: 0.5rem; align-items: stretch; }
+.chat-form textarea { flex: 1; resize: none; padding: 0.5rem 0.75rem; font: inherit; border: 1px solid #cbd5e1; border-radius: 10px; }
+.chat-form button { display: grid; place-items: center; width: 3rem; padding: 0; }
+.unread-badge { display: inline-block; min-width: 1.4rem; padding: 0.05rem 0.45rem; border-radius: 999px; background: #db2777; color: #fff; font-size: 0.75rem; font-weight: 700; text-align: center; }
+.guest-tag { display: inline-block; margin-left: 0.4rem; padding: 0.05rem 0.5rem; border-radius: 999px; background: #e2e8f0; color: #475569; font-size: 0.7rem; font-weight: 600; vertical-align: middle; }
+.form .muted-note, .muted-note { color: var(--muted); font-size: 0.9rem; margin: 0; }
+.chat-toggle { display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+button.chat-toggle[type="button"] { background: #fff; color: var(--ink); border: 1px solid #cbd5e1; }
+.placed { max-width: 520px; margin: 1.5rem auto; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 0.5rem; }
+.placed h2 { margin: 0; }
+.placed p { margin: 0.25rem 0; }
+.placed-code { font-size: 2.4rem; font-weight: 800; letter-spacing: 0.25em; color: var(--primary); text-align: center; background: #ecfeff; border: 1px dashed #67e8f9; border-radius: 12px; padding: 0.5rem; }
+.btn-primary-link { align-self: flex-start; display: inline-block; padding: 0.55rem 1rem; border-radius: 8px; background: var(--primary); color: #fff; text-decoration: none; font-weight: 600; }

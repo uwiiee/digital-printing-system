@@ -32,17 +32,21 @@ async function sendOrder(res, order) {
   res.json(order);
 }
 
-const LIST_FIELDS = "contactName status estimatedTotal finalPrice createdAt items.quantity downPayment";
+const LIST_FIELDS = "code customer contactName status estimatedTotal finalPrice createdAt items.quantity downPayment unreadForAdmin";
 
-// A short version of an order, for the dashboard lists
+// A short version of an order, for the dashboard lists.
+// contactName falls back to the account email for logged-in customers (they leave no name).
 const brief = (o) => ({
   _id: o._id,
-  contactName: o.contactName,
+  code: o.code,
+  contactName: o.contactName || o.customer?.email || "Customer",
+  guest: !o.customer,
   status: o.status,
   itemCount: o.items.reduce((sum, i) => sum + i.quantity, 0),
   estimatedTotal: o.estimatedTotal,
   finalPrice: o.finalPrice,
   downPaymentAmount: o.downPayment?.amount ?? 0,
+  unread: o.unreadForAdmin ?? 0,
   createdAt: o.createdAt,
 });
 
@@ -52,16 +56,17 @@ export async function dashboardSummary(req, res, next) {
     // The month figures follow the same dataset as the reports (demo orders count when INCLUDE_DEMO_DATA=true).
     const { name, filter } = resolveSource(req.query);
     const now = new Date();
+    const list = (query) => Order.find(query).select(LIST_FIELDS).populate("customer", "email");
 
-    const [statusRows, ordersToday, month, pending, awaiting, recent, demo] = await Promise.all([
+    const [statusRows, ordersToday, month, pending, awaiting, recent, unreadOrders, unreadTotal, demo] = await Promise.all([
       Order.aggregate([{ $match: REAL_ONLY }, { $group: { _id: "$status", count: { $sum: 1 } } }]),
       Order.countDocuments({ ...REAL_ONLY, createdAt: { $gte: manilaDayStart(now) } }),
       Order.aggregate([
         { $match: { ...filter, status: "Completed", completedAt: { $gte: manilaMonthStart(now) } } },
         { $group: { _id: null, revenue: { $sum: "$finalPrice" }, orders: { $sum: 1 } } },
       ]),
-      Order.find({ ...REAL_ONLY, status: "Pending" }).sort({ createdAt: 1 }).limit(5).select(LIST_FIELDS).lean(),
-      Order.find({
+      list({ ...REAL_ONLY, status: "Pending" }).sort({ createdAt: 1 }).limit(5).lean(),
+      list({
         ...REAL_ONLY,
         status: { $ne: "Completed" },
         "downPayment.requested": true,
@@ -69,9 +74,13 @@ export async function dashboardSummary(req, res, next) {
       })
         .sort({ createdAt: 1 })
         .limit(5)
-        .select(LIST_FIELDS)
         .lean(),
-      Order.find(REAL_ONLY).sort({ createdAt: -1 }).limit(5).select(LIST_FIELDS).lean(),
+      list(REAL_ONLY).sort({ createdAt: -1 }).limit(5).lean(),
+      list({ ...REAL_ONLY, unreadForAdmin: { $gt: 0 } }).sort({ lastMessageAt: -1 }).limit(5).lean(),
+      Order.aggregate([
+        { $match: { ...REAL_ONLY, unreadForAdmin: { $gt: 0 } } },
+        { $group: { _id: null, total: { $sum: "$unreadForAdmin" } } },
+      ]),
       includesDemo(name),
     ]);
 
@@ -89,6 +98,7 @@ export async function dashboardSummary(req, res, next) {
       needsAttention: pending.map(brief),
       awaitingDownPayment: awaiting.map(brief),
       recent: recent.map(brief),
+      messages: { unread: unreadTotal[0]?.total ?? 0, orders: unreadOrders.map(brief) },
     });
   } catch (err) {
     next(err);

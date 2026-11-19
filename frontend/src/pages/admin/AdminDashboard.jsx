@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, ChartColumn, CircleCheck, Hourglass, Package, PhilippinePeso, TrendingUp, Wrench } from "lucide-react";
+import { ArrowRight, ChartColumn, CircleCheck, Hourglass, MessageCircle, Package, PhilippinePeso, TrendingUp, Wrench } from "lucide-react";
 import { api } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { STATUS_LABEL, peso } from "../../utils/format";
 import { greeting, longDate, timeAgo } from "../../utils/dates";
+import { orderLabel } from "../../utils/orders";
 import DemoTag from "../../components/DemoTag";
 import MonthlyBars from "../../components/MonthlyBars";
 import "../../dashboard.css";
+import "../../chat.css";
 
 const REFRESH_MS = 30_000; // the order queue refreshes by itself
 
-const shortId = (id) => id.slice(-6).toUpperCase();
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const orderTotal = (o) => (o.finalPrice != null ? peso(o.finalPrice) : `${peso(o.estimatedTotal)} est.`);
 
@@ -60,6 +61,7 @@ export function DashboardView({ summary, sales, salesError = false, forecast, fo
   const months = sales ? sales.monthly.slice(-6) : [];
   const best = sales ? sales.byProduct.slice(0, 4) : [];
   const oldest = summary.needsAttention[0];
+  const unread = summary.messages?.unread ?? 0;
 
   return (
     <>
@@ -71,6 +73,7 @@ export function DashboardView({ summary, sales, salesError = false, forecast, fo
             {waiting > 0
               ? `${plural(waiting, "order")} ${waiting === 1 ? "is" : "are"} waiting for your review.`
               : "No orders are waiting for review. Nice work."}
+            {unread > 0 && ` You have ${plural(unread, "unread message")}.`}
           </p>
         </div>
         <div className="hero-actions">
@@ -104,8 +107,8 @@ export function DashboardView({ summary, sales, salesError = false, forecast, fo
                 {summary.needsAttention.map((o) => (
                   <li key={o._id}>
                     <div>
-                      <strong>{o.contactName}</strong>
-                      <small>#{shortId(o._id)} · {plural(o.itemCount, "item")} · {orderTotal(o)}</small>
+                      <strong>{o.contactName}{o.guest && <span className="guest-tag">Guest</span>}</strong>
+                      <small>#{orderLabel(o)} · {plural(o.itemCount, "item")} · {orderTotal(o)}</small>
                     </div>
                     <span className="queue-age">{timeAgo(o.createdAt, now)}</span>
                     <Link className="btn btn-small" to={`/admin/orders/${o._id}`}>Review</Link>
@@ -115,6 +118,24 @@ export function DashboardView({ summary, sales, salesError = false, forecast, fo
             )}
           </div>
 
+          {unread > 0 && (
+            <div className="panel">
+              <h3>Unread messages</h3>
+              <ul className="queue">
+                {summary.messages.orders.map((o) => (
+                  <li key={o._id}>
+                    <div>
+                      <strong>{o.contactName}</strong>
+                      <small>#{orderLabel(o)} · {STATUS_LABEL[o.status]}</small>
+                    </div>
+                    <span className="unread-badge">{o.unread}</span>
+                    <Link className="btn btn-small" to={`/admin/orders/${o._id}`}><MessageCircle size={14} aria-hidden="true" /> Open chat</Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {summary.awaitingDownPayment.length > 0 && (
             <div className="panel">
               <h3>Waiting for a down payment</h3>
@@ -123,7 +144,7 @@ export function DashboardView({ summary, sales, salesError = false, forecast, fo
                   <li key={o._id}>
                     <div>
                       <strong>{o.contactName}</strong>
-                      <small>#{shortId(o._id)} · {STATUS_LABEL[o.status]}</small>
+                      <small>#{orderLabel(o)} · {STATUS_LABEL[o.status]}</small>
                     </div>
                     <span className="queue-age">{peso(o.downPaymentAmount)} requested</span>
                     <Link className="btn btn-small" to={`/admin/orders/${o._id}`}>Open</Link>
@@ -162,7 +183,7 @@ export function DashboardView({ summary, sales, salesError = false, forecast, fo
                   <tbody>
                     {summary.recent.map((o) => (
                       <tr key={o._id}>
-                        <td>#{shortId(o._id)}<small style={{ display: "block" }}>{timeAgo(o.createdAt, now)}</small></td>
+                        <td>#{orderLabel(o)}<small style={{ display: "block" }}>{timeAgo(o.createdAt, now)}</small></td>
                         <td>{o.contactName}</td>
                         <td>{orderTotal(o)}</td>
                         <td><span className={`badge badge-${o.status.replace(" ", "-")}`}>{STATUS_LABEL[o.status]}</span></td>
@@ -208,7 +229,7 @@ export function DashboardView({ summary, sales, salesError = false, forecast, fo
               <Link to="/admin/orders"><Package size={18} aria-hidden="true" /> All orders</Link>
               <Link to="/admin/reports"><ChartColumn size={18} aria-hidden="true" /> Sales reports</Link>
               <Link to="/admin/forecast"><TrendingUp size={18} aria-hidden="true" /> Sales forecast</Link>
-         </div>
+            </div>
           </div>
         </div>
       </div>

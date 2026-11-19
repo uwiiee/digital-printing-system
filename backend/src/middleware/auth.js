@@ -24,6 +24,13 @@ export async function authenticate(req, res, next) {
   }
 }
 
+// For routes that work with or without a login (guest ordering).
+// No Authorization header = guest. A header that is present must be valid.
+export function optionalAuthenticate(req, res, next) {
+  if (!req.headers.authorization) return next();
+  return authenticate(req, res, next);
+}
+
 // Allows only the listed roles, e.g. authorize("admin")
 export const authorize =
   (...roles) =>

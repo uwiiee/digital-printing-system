@@ -10,6 +10,7 @@ import {
   completeOrder,
 } from "../controllers/adminOrderController.js";
 import { salesReport, forecast } from "../controllers/reportController.js";
+import { adminThread, adminSend } from "../controllers/messageController.js";
 
 const router = Router();
 
@@ -25,6 +26,9 @@ router.patch("/orders/:id/pricing", updatePricing);
 router.patch("/orders/:id/down-payment-received", setDownPaymentReceived);
 router.post("/orders/:id/confirm", confirmOrder);
 router.post("/orders/:id/complete", completeOrder);
+
+router.get("/orders/:id/messages", adminThread);
+router.post("/orders/:id/messages", adminSend);
 
 router.get("/reports/sales", salesReport);
 router.get("/forecast", forecast);

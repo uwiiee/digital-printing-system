@@ -32,7 +32,7 @@ export async function uploadDesign(file, token) {
 
   const res = await fetch(`${API_URL}/uploads/design`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
+    headers: token ? { Authorization: `Bearer ${token}` } : {}, // guests have no token
     body: form,
   });
 

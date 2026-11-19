@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, FILE_URL } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import ChatBox from "../../components/ChatBox";
 import { STATUS_LABEL, labelFromKey, peso } from "../../utils/format";
+import { orderLabel } from "../../utils/orders";
 
 export default function AdminOrderDetail() {
   const { id } = useParams();
@@ -47,10 +49,7 @@ export default function AdminOrderDetail() {
     api(`/admin/orders/${id}/pricing`, {
       method: "PATCH",
       token,
-      body: {
-        finalPrice: price,
-        downPayment: { requested: dpRequested, amount: dpAmount },
-      },
+      body: { finalPrice: price, downPayment: { requested: dpRequested, amount: dpAmount } },
     });
 
   const handleSave = () => run(savePricing, "Price saved.");
@@ -69,20 +68,12 @@ export default function AdminOrderDetail() {
           token,
           body: { received: !order.downPayment.received },
         }),
-      "Down payment updated.",
+      "Down payment updated."
     );
 
   const handleComplete = () => {
-    if (
-      !window.confirm(
-        "Mark this order as completed? Do this once the customer has picked it up.",
-      )
-    )
-      return;
-    run(
-      () => api(`/admin/orders/${id}/complete`, { method: "POST", token }),
-      "Order marked as completed.",
-    );
+    if (!window.confirm("Mark this order as completed? Do this once the customer has picked it up.")) return;
+    run(() => api(`/admin/orders/${id}/complete`, { method: "POST", token }), "Order marked as completed.");
   };
 
   if (!order) {
@@ -98,35 +89,31 @@ export default function AdminOrderDetail() {
 
   const locked = order.status === "Completed";
   const dpReceived = order.downPayment.received;
+  const guest = !order.customer;
 
   return (
     <>
-      <p>
-        <Link to="/admin/orders">&larr; Back to orders</Link>
-      </p>
+      <p><Link to="/admin/orders">&larr; Back to orders</Link></p>
       <div className="row">
-        <h1 style={{ margin: 0 }}>
-          Order #{order._id.slice(-6).toUpperCase()}
-        </h1>
-        <span className={`badge badge-${order.status.replace(" ", "-")}`}>
-          {STATUS_LABEL[order.status]}
-        </span>
+        <h1 style={{ margin: 0 }}>Order #{orderLabel(order)}</h1>
+        <span className={`badge badge-${order.status.replace(" ", "-")}`}>{STATUS_LABEL[order.status]}</span>
       </div>
       <small>Placed {new Date(order.createdAt).toLocaleString()}</small>
 
       <div className="panel">
-        <h3>Customer</h3>
-        <p>
-          {order.contactName} · {order.contactNumber}
-          <small style={{ display: "block" }}>
-            Account: {order.customer?.email}
-          </small>
-        </p>
-        {order.notes && (
+        <h3>Customer {guest && <span className="guest-tag">Guest, no account</span>}</h3>
+        {guest ? (
           <p>
-            <strong>Notes:</strong> {order.notes}
+            {order.contactName} · <strong>{order.contactNumber}</strong>
+            <small style={{ display: "block" }}>This customer has no account, so there is no chat. Contact them at this number.</small>
+          </p>
+        ) : (
+          <p>
+            {order.customer.email}
+            <small style={{ display: "block" }}>This customer has an account. Use the chat below to confirm the price, ask for a down payment, or ask questions.</small>
           </p>
         )}
+        {order.notes && <p><strong>Notes:</strong> {order.notes}</p>}
       </div>
 
       <div className="panel">
@@ -134,13 +121,7 @@ export default function AdminOrderDetail() {
         <div className="table-wrap">
           <table className="table">
             <thead>
-              <tr>
-                <th>Item</th>
-                <th>Details</th>
-                <th>Design</th>
-                <th>Qty</th>
-                <th>Estimate</th>
-              </tr>
+              <tr><th>Item</th><th>Details</th><th>Design</th><th>Qty</th><th>Estimate</th></tr>
             </thead>
             <tbody>
               {order.items.map((i, idx) => (
@@ -148,23 +129,13 @@ export default function AdminOrderDetail() {
                   <td>{i.productName}</td>
                   <td>
                     {Object.entries(i.specs).map(([k, v]) => (
-                      <small key={k} style={{ display: "block" }}>
-                        {labelFromKey(k)}: {v}
-                      </small>
+                      <small key={k} style={{ display: "block" }}>{labelFromKey(k)}: {v}</small>
                     ))}
                   </td>
                   <td>
                     {i.designFile ? (
-                      <a
-                        href={FILE_URL + i.designFile}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <img
-                          className="thumb"
-                          src={FILE_URL + i.designFile}
-                          alt="Customer design"
-                        />
+                      <a href={FILE_URL + i.designFile} target="_blank" rel="noreferrer">
+                        <img className="thumb" src={FILE_URL + i.designFile} alt="Customer design" />
                       </a>
                     ) : (
                       <small>None (sample design)</small>
@@ -177,9 +148,7 @@ export default function AdminOrderDetail() {
             </tbody>
           </table>
         </div>
-        <p>
-          <strong>Estimated total: {peso(order.estimatedTotal)}</strong>
-        </p>
+        <p><strong>Estimated total: {peso(order.estimatedTotal)}</strong></p>
       </div>
 
       <div className="panel">
@@ -187,42 +156,24 @@ export default function AdminOrderDetail() {
         <div className="admin-form">
           <label>
             Final price (₱)
-            <input
-              type="number"
-              min="0"
-              step="any"
-              value={price}
-              disabled={locked}
-              onChange={(e) => setPrice(e.target.value)}
-            />
+            <input type="number" min="0" step="any" value={price} disabled={locked}
+              onChange={(e) => setPrice(e.target.value)} />
           </label>
 
           {dpReceived ? (
-            <p className="notice">
-              Down payment of {peso(order.downPayment.amount)} received.
-            </p>
+            <p className="notice">Down payment of {peso(order.downPayment.amount)} received.</p>
           ) : (
             <>
               <label className="check">
-                <input
-                  type="checkbox"
-                  checked={dpRequested}
-                  disabled={locked}
-                  onChange={(e) => setDpRequested(e.target.checked)}
-                />
+                <input type="checkbox" checked={dpRequested} disabled={locked}
+                  onChange={(e) => setDpRequested(e.target.checked)} />
                 Request a down payment (GCash)
               </label>
               {dpRequested && (
                 <label>
                   Down payment amount (₱)
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={dpAmount}
-                    disabled={locked}
-                    onChange={(e) => setDpAmount(e.target.value)}
-                  />
+                  <input type="number" min="0" step="any" value={dpAmount} disabled={locked}
+                    onChange={(e) => setDpAmount(e.target.value)} />
                 </label>
               )}
             </>
@@ -232,31 +183,28 @@ export default function AdminOrderDetail() {
           {message && <p className="notice">{message}</p>}
 
           <div className="actions">
-            {!locked && (
-              <button type="button" disabled={busy} onClick={handleSave}>
-                Save price
-              </button>
-            )}
+            {!locked && <button type="button" disabled={busy} onClick={handleSave}>Save price</button>}
             {order.status === "Pending" && (
-              <button disabled={busy} onClick={handleConfirm}>
-                Confirm order
-              </button>
+              <button disabled={busy} onClick={handleConfirm}>Confirm order</button>
             )}
             {order.downPayment.requested && !locked && (
               <button type="button" disabled={busy} onClick={handleReceived}>
-                {dpReceived
-                  ? "Undo: down payment received"
-                  : "Mark down payment received"}
+                {dpReceived ? "Undo: down payment received" : "Mark down payment received"}
               </button>
             )}
             {order.status === "On Process" && (
-              <button disabled={busy} onClick={handleComplete}>
-                Mark as completed (picked up)
-              </button>
+              <button disabled={busy} onClick={handleComplete}>Mark as completed (picked up)</button>
             )}
           </div>
         </div>
       </div>
+
+      {!guest && (
+        <div className="panel">
+          <h3>Chat with the customer</h3>
+          <ChatBox orderId={order._id} role="admin" />
+        </div>
+      )}
     </>
   );
 }

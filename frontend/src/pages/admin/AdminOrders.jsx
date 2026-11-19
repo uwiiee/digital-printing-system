@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { STATUS_LABEL, peso } from "../../utils/format";
+import { orderLabel } from "../../utils/orders";
 
 const TABS = [
   ["", "All"],
@@ -20,13 +21,17 @@ export default function AdminOrders() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    let ignore = false;
     setLoading(true);
     setError("");
     const query = status ? `?status=${encodeURIComponent(status)}` : "";
     api(`/admin/orders${query}`, { token })
-      .then(setOrders)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+      .then((d) => !ignore && setOrders(d))
+      .catch((err) => !ignore && setError(err.message))
+      .finally(() => !ignore && setLoading(false));
+    return () => {
+      ignore = true;
+    };
   }, [status, token]);
 
   return (
@@ -68,27 +73,29 @@ export default function AdminOrders() {
             <tbody>
               {orders.map((o) => (
                 <tr key={o._id}>
-                  <td>#{o._id.slice(-6).toUpperCase()}</td>
+                  <td>#{orderLabel(o)}</td>
                   <td>{new Date(o.createdAt).toLocaleDateString()}</td>
                   <td>
-                    {o.contactName}
-                    <small style={{ display: "block" }}>
-                      {o.contactNumber}
-                    </small>
+                    {o.customer ? (
+                      <>
+                        {o.customer.email}
+                        {o.unreadForAdmin > 0 && <> <span className="unread-badge" title="Unread messages">{o.unreadForAdmin}</span></>}
+                      </>
+                    ) : (
+                      <>
+                        {o.contactName}
+                        <span className="guest-tag">Guest</span>
+                        <small style={{ display: "block" }}>{o.contactNumber}</small>
+                      </>
+                    )}
                   </td>
                   <td>{o.items.reduce((sum, i) => sum + i.quantity, 0)}</td>
                   <td>{peso(o.estimatedTotal)}</td>
                   <td>{o.finalPrice != null ? peso(o.finalPrice) : "-"}</td>
                   <td>
-                    <span
-                      className={`badge badge-${o.status.replace(" ", "-")}`}
-                    >
-                      {STATUS_LABEL[o.status]}
-                    </span>
+                    <span className={`badge badge-${o.status.replace(" ", "-")}`}>{STATUS_LABEL[o.status]}</span>
                   </td>
-                  <td>
-                    <Link to={`/admin/orders/${o._id}`}>View</Link>
-                  </td>
+                  <td><Link to={`/admin/orders/${o._id}`}>View</Link></td>
                 </tr>
               ))}
             </tbody>

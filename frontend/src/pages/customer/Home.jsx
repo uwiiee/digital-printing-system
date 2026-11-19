@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
@@ -9,8 +8,6 @@ import { peso } from "../../utils/format";
 export default function Home() {
   const { user } = useAuth();
   const { addItem } = useCart();
-  const navigate = useNavigate();
-  const location = useLocation();
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,10 +22,15 @@ export default function Home() {
       .finally(() => setLoading(false));
   }, []);
 
+  const showToast = (message) => {
+    setToast(message);
+    setTimeout(() => setToast(""), 2500);
+  };
+
+  // Anyone can order: guests as well as logged-in customers. Only the admin account can't.
   const handleAdd = (product) => {
-    // Ordering needs a customer login (design uploads and orders are tied to the account)
-    if (!user || user.role !== "customer") {
-      navigate("/login", { state: { from: location } });
+    if (user?.role === "admin") {
+      showToast("Admin accounts can't place orders. Log out to order as a customer.");
       return;
     }
     setSelected(product);
@@ -37,16 +39,13 @@ export default function Home() {
   const handleConfirmAdd = (entry) => {
     addItem(entry);
     setSelected(null);
-    setToast(`${entry.product.name} added to cart`);
-    setTimeout(() => setToast(""), 2500);
+    showToast(`${entry.product.name} added to cart`);
   };
 
   return (
     <>
       <h1>Digital Printing Services</h1>
-      <p>
-        Pick your items, review your cart, and pick up your order at the shop.
-      </p>
+      <p>Pick your items, review your cart, and pick up your order at the shop.</p>
 
       {loading && <p>Loading products...</p>}
       {error && <p className="error">{error}</p>}
@@ -54,26 +53,17 @@ export default function Home() {
       <div className="grid">
         {products.map((p) => (
           <div className="card" key={p._id}>
-            {p.imageUrl && (
-              <img className="card-img" src={p.imageUrl} alt={p.name} />
-            )}
+            {p.imageUrl && <img className="card-img" src={p.imageUrl} alt={p.name} />}
             <h3>{p.name}</h3>
             <p>{p.description}</p>
-            <p>
-              <strong>{peso(p.examplePrice)}</strong>{" "}
-              <small>{p.priceUnit} (example price)</small>
-            </p>
+            <p><strong>{peso(p.examplePrice)}</strong> <small>{p.priceUnit} (example price)</small></p>
             <button onClick={() => handleAdd(p)}>Add</button>
           </div>
         ))}
       </div>
 
       {selected && (
-        <AddToCartModal
-          product={selected}
-          onClose={() => setSelected(null)}
-          onAdd={handleConfirmAdd}
-        />
+        <AddToCartModal product={selected} onClose={() => setSelected(null)} onAdd={handleConfirmAdd} />
       )}
       {toast && <div className="toast">{toast}</div>}
     </>

@@ -7,6 +7,7 @@ export default function CustomerLayout() {
   const { count, clearCart } = useCart();
   const navigate = useNavigate();
   const isCustomer = user?.role === "customer";
+  const isAdmin = user?.role === "admin";
 
   const handleLogout = () => {
     clearCart(); // the next person on this browser starts with an empty cart
@@ -21,7 +22,8 @@ export default function CustomerLayout() {
         <nav>
           <Link to="/">Home</Link>
           {isCustomer && <Link to="/orders">My Orders</Link>}
-          {isCustomer && <Link to="/cart">Cart ({count})</Link>}
+          {!isAdmin && <Link to="/cart">Cart ({count})</Link>}
+          {!user && <Link to="/track">Track order</Link>}
           {isCustomer && <Link to="/account">Account</Link>}
           {user ? (
             <>

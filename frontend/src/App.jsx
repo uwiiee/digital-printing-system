@@ -8,6 +8,8 @@ import Register from "./pages/customer/Register";
 import Cart from "./pages/customer/Cart";
 import MyOrders from "./pages/customer/MyOrders";
 import Account from "./pages/customer/Account";
+import TrackOrder from "./pages/customer/TrackOrder";
+import OrderPlaced from "./pages/customer/OrderPlaced";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminOrders from "./pages/admin/AdminOrders";
@@ -29,8 +31,11 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        {/* Guests can order and track too, so these don't need a login */}
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/track" element={<TrackOrder />} />
+        <Route path="/order-placed" element={<OrderPlaced />} />
         <Route element={<RequireRole role="customer" redirectTo="/login" />}>
-          <Route path="/cart" element={<Cart />} />
           <Route path="/orders" element={<MyOrders />} />
           <Route path="/account" element={<Account />} />
         </Route>
