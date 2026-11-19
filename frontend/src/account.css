@@ -1,0 +1,7 @@
+/* Change-password form (used on the customer and admin account pages) */
+.account-info { color: var(--muted); margin-top: 0.25rem; }
+.form.account-form { margin: 1rem 0; }
+.account-form label { display: flex; flex-direction: column; gap: 0.3rem; font-weight: 600; font-size: 0.9rem; }
+.account-form label small { font-weight: 400; color: var(--muted); }
+.form button.toggle-link { display: inline-flex; align-items: center; gap: 0.4rem; align-self: flex-start; padding: 0; background: none; border: 0; color: var(--primary); font-weight: 500; }
+.form button.toggle-link:hover:not(:disabled) { background: none; text-decoration: underline; }
